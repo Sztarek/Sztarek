@@ -13,10 +13,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 
-import java.awt.*;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 public class Main extends Application {
 
@@ -44,6 +41,8 @@ public class Main extends Application {
       for(int j = 0; j < block[i].length; j++){
         if(block[i][j] == 1){
           setColorForPane(elementContainer, i, j, color);
+        }else{
+          setColorForPane(elementContainer, i, j, "#ffffff");
         }
       }
     }
@@ -51,58 +50,89 @@ public class Main extends Application {
   }
 
 
-  private String[][] getPlayArea(GridPane elementContainer) {
-    String[][] block = new String[10][10];
+  private int[][] getPlayArea(GridPane elementContainer) {
+    int[][] block = new int[10][10];
     int i = 0;
     for (Node node : elementContainer.getChildren()) {
       if(i >= 100){
         break;
       }
-      block[GridPane.getRowIndex(node)][GridPane.getColumnIndex(node)] = node.getStyle();
+      block[GridPane.getRowIndex(node)][GridPane.getColumnIndex(node)] = node.getStyle().contains("#b81111") ? 1 : 0;
       i++;
     }
     return block;
   }
 
-  private boolean renderGreyElementIfPossible(GridPane gp, int[][] block, int x, int y){
-    boolean isPossible = true;
-    List<Point> coordMap = mapBlockToCoords(block,x , y);
-    for(Node node : gp.getChildren()){
+  private boolean checkIfPossible(GridPane gp, int[][] block, int x, int y){
+    int[][] bg = getPlayArea(gp);
+    List<Point> coords = mapBlockToCoords(block, x, y);
+    System.out.println("------------");
+    for(int i = 0; i < 10; i++){
+      for(int j = 0; j < 10; j++){
+        System.out.print(bg[i][j] + " ");
+      }
+      System.out.println();
+    }
+    for(Point point : coords){
       try{
-        int actualX = GridPane.getColumnIndex(node) != null ? GridPane.getColumnIndex(node) : -1;
-        int actualY = GridPane.getRowIndex(node) != null ? GridPane.getRowIndex(node) : -1;
-        if(node.getStyle().contains("#b81111") && coordMap.get(actualX) != null){
-          if(coordMap.get(actualX) == actualY){
-            isPossible = false;
-          }
+        if(bg[point.x][point.y] == 1){
+          return false;
         }
-      }catch(Exception e){
-        isPossible = false;
+      }catch (Exception e){
+        return false;
       }
     }
 
-    System.out.println(coordMap);
+    return true;
+  }
+
+  private boolean renderElementIfPossible(GridPane gp, int[][] block, int x, int y, String color){
+    boolean isPossible = checkIfPossible(gp, block, y, x);
+    List<Point> coords = mapBlockToCoords(block, y, x);
 
     if(isPossible){
-      coordMap.forEach((i, j) -> {
-        setColorForPane(gp, i, j, "#acafb0");
-      });
+      for(Point point : coords){
+        setColorForPane(gp, point.y, point.x, color);
+      }
     }
+
 
     return isPossible;
   }
   private List<Point> mapBlockToCoords(int[][] block, int x, int y){
-    List<Point> result = new List<>();
+    List<Point> result = new LinkedList<>();
     for(int i = 0; i < 5; i++){
       for(int j =0; j < 5; j++){
         if(block[i][j] == 1){
-          result.put(i + x, j + y);
+          result.add(new Point(i + x, j + y));
         }
       }
     }
     return result;
   }
 
+  private void deleteGreyElements(GridPane gp){
+    for(Node node : gp.getChildren()){
+      if(node.getStyle().contains("#d4d0c7")){
+        setColorForPane(gp, GridPane.getColumnIndex(node), GridPane.getRowIndex(node), "#ffffff");
+      }
+    }
+  }
+
+
+
+  private int[][] getRandomElement(GridPane elementContainer) {
+    int[][] block = new int[5][5];
+    int i = 0;
+    for (Node node : elementContainer.getChildren()) {
+      if(i >= 25){
+        break;
+      }
+      block[GridPane.getRowIndex(node)][GridPane.getColumnIndex(node)] = node.getStyle().contains("#b81111") ? 1 : 0;
+      i++;
+    }
+    return block;
+  }
   @Override
   public void start(Stage primaryStage) throws Exception{
     Parent root = FXMLLoader.load(getClass().getResource("sample.fxml"));
@@ -119,18 +149,83 @@ public class Main extends Application {
     GridPane nextElement1 = (GridPane) scene.lookup("#nextElement1");
     GridPane nextElement2 = (GridPane) scene.lookup("#nextElement2");
     GridPane nextElement3 = (GridPane) scene.lookup("#nextElement3");
-    int[][] newBlock1 = renderRandomElement("#b81111", nextElement1);
-    int[][] newBlock2 = renderRandomElement("#b81111", nextElement2);
-    int[][] newBlock3 = renderRandomElement("#b81111", nextElement3);
 
     nextElement1.setOnMouseClicked(new EventHandler<MouseEvent>() {
       @Override
       public void handle(MouseEvent mouseEvent) {
-        int[][] actualBlock = newBlock1;
-        String[][] s = getPlayArea(gameArea);
         for(Node node : gameArea.getChildren()){
           node.setOnMouseEntered(e -> {
-            renderGreyElementIfPossible(gameArea, newBlock1, (int)e.getSceneX() / 50, (int)e.getSceneY() / 50);
+            int[][] s = getPlayArea(gameArea);
+            int[][] actualBlock = getRandomElement(nextElement1);
+            renderElementIfPossible(gameArea, actualBlock, (int)e.getSceneX() / 50, (int)e.getSceneY() / 50, "#d4d0c7");
+          });
+          node.setOnMouseExited(e -> {
+            int[][] s = getPlayArea(gameArea);
+            int[][] actualBlock = getRandomElement(nextElement1);
+            deleteGreyElements(gameArea);
+          });
+          node.setOnMouseClicked(e -> {
+            int[][] s = getPlayArea(gameArea);
+            int[][] actualBlock = getRandomElement(nextElement1);
+            boolean isGood = renderElementIfPossible(gameArea, actualBlock, (int)e.getSceneX() / 50, (int)e.getSceneY() / 50, "#b81111");
+            if(isGood){
+              int[][] newActual = getRandomElement();
+              renderRandomElement("#b81111", nextElement1);
+            }
+          });
+        }
+      }
+    });
+
+    nextElement2.setOnMouseClicked(new EventHandler<MouseEvent>() {
+      @Override
+      public void handle(MouseEvent mouseEvent) {
+        for(Node node : gameArea.getChildren()){
+          node.setOnMouseEntered(e -> {
+            int[][] s = getPlayArea(gameArea);
+            int[][] actualBlock = getRandomElement(nextElement2);
+            renderElementIfPossible(gameArea, actualBlock, (int)e.getSceneX() / 50, (int)e.getSceneY() / 50, "#d4d0c7");
+          });
+          node.setOnMouseExited(e -> {
+            int[][] s = getPlayArea(gameArea);
+            int[][] actualBlock = getRandomElement(nextElement2);
+            deleteGreyElements(gameArea);
+          });
+          node.setOnMouseClicked(e -> {
+            int[][] s = getPlayArea(gameArea);
+            int[][] actualBlock = getRandomElement(nextElement2);
+            boolean isGood = renderElementIfPossible(gameArea, actualBlock, (int)e.getSceneX() / 50, (int)e.getSceneY() / 50, "#b81111");
+            if(isGood){
+              int[][] newActual = getRandomElement();
+              renderRandomElement("#b81111", nextElement2);
+            }
+          });
+        }
+      }
+    });
+
+    nextElement3.setOnMouseClicked(new EventHandler<MouseEvent>() {
+      @Override
+      public void handle(MouseEvent mouseEvent) {
+        for(Node node : gameArea.getChildren()){
+          node.setOnMouseEntered(e -> {
+            int[][] s = getPlayArea(gameArea);
+            int[][] actualBlock = getRandomElement(nextElement3);
+            renderElementIfPossible(gameArea, actualBlock, (int)e.getSceneX() / 50, (int)e.getSceneY() / 50, "#d4d0c7");
+          });
+          node.setOnMouseExited(e -> {
+            int[][] s = getPlayArea(gameArea);
+            int[][] actualBlock = getRandomElement(nextElement3);
+            deleteGreyElements(gameArea);
+          });
+          node.setOnMouseClicked(e -> {
+            int[][] s = getPlayArea(gameArea);
+            int[][] actualBlock = getRandomElement(nextElement3);
+            boolean isGood = renderElementIfPossible(gameArea, actualBlock, (int)e.getSceneX() / 50, (int)e.getSceneY() / 50, "#b81111");
+            if(isGood){
+              int[][] newActual = getRandomElement();
+              renderRandomElement("#b81111", nextElement3);
+            }
           });
         }
       }
