@@ -9,6 +9,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Label;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
@@ -17,26 +18,22 @@ import java.util.*;
 
 public class Main extends Application {
 
+
   private boolean setColorForPane(GridPane gridPane, int col, int row, String color) {
     for (Node node : gridPane.getChildren()) {
       if (GridPane.getColumnIndex(node) == null || GridPane.getRowIndex(node) == null){
         continue;
       }
       if (GridPane.getColumnIndex(node) == col && GridPane.getRowIndex(node) == row) {
-        node.setStyle("-fx-background-color:" + color);
+        setColorForNode(node, color);
         return true;
       }
     }
     return false;
   }
 
-  private int[][] getRandomElement(){
-    Random r = new Random();
-    return BlockTypes.blockTypes[r.nextInt(BlockTypes.blockTypes.length)];
-  }
-
   private int[][] renderRandomElement(String color, GridPane elementContainer){
-    int[][] block = getRandomElement();
+    int[][] block = BlockTypes.getRandomElement();
     for(int i = 0; i < block.length; i++){
       for(int j = 0; j < block[i].length; j++){
         if(block[i][j] == 1){
@@ -66,13 +63,6 @@ public class Main extends Application {
   private boolean checkIfPossible(GridPane gp, int[][] block, int x, int y){
     int[][] bg = getPlayArea(gp);
     List<Point> coords = mapBlockToCoords(block, x, y);
-    System.out.println("------------");
-    for(int i = 0; i < 10; i++){
-      for(int j = 0; j < 10; j++){
-        System.out.print(bg[i][j] + " ");
-      }
-      System.out.println();
-    }
     for(Point point : coords){
       try{
         if(bg[point.x][point.y] == 1){
@@ -111,6 +101,25 @@ public class Main extends Application {
     return result;
   }
 
+  private void renderBlank(GridPane element) {
+    for(Node node : element.getChildren()){
+      node.setStyle("-fx-background-color: #ffffff");
+    }
+  }
+
+  private boolean checkIfBlank(GridPane e){
+    for(Node node : e.getChildren()){
+      if(!node.getStyle().contains("#ffffff")){
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean checkIfAllBlank(GridPane e1, GridPane e2, GridPane e3){
+    return checkIfBlank(e1) && checkIfBlank(e2) && checkIfBlank(e3);
+  }
+
   private void deleteGreyElements(GridPane gp){
     for(Node node : gp.getChildren()){
       if(node.getStyle().contains("#d4d0c7")){
@@ -119,7 +128,88 @@ public class Main extends Application {
     }
   }
 
+  private void setColorForNode(Node node, String color){
+    node.setStyle("-fx-background-color: "+color);
+  }
 
+  private List<Integer> checkForFilledRowIndecies(GridPane gp){
+    int[] rows = new int[10];
+    for(Node node : gp.getChildren()){
+      if(GridPane.getRowIndex(node) == null){
+        continue;
+      }
+      if(!node.getStyle().contains("#ffffff")){
+        rows[GridPane.getRowIndex(node)]++;
+      }
+    }
+    List<Integer> filledRows = new LinkedList<>();
+    for(int i = 0; i < 10; i++){
+      if(rows[i] == 10){
+        filledRows.add(i);
+      }
+    }
+
+    return filledRows;
+  }
+
+  private List<Integer> checkForFilledColumnIndecies(GridPane gp){
+    int[] columns = new int[10];
+    for(Node node : gp.getChildren()){
+      if(GridPane.getColumnIndex(node) == null){
+        continue;
+      }
+      if(!node.getStyle().contains("#ffffff")){
+        System.out.println("COL INDEX: " + GridPane.getColumnIndex(node));
+        columns[GridPane.getColumnIndex(node)]++;
+      }
+    }
+    List<Integer> filledColumns = new LinkedList<>();
+    for(int i = 0; i < 10; i++){
+      if(columns[i] == 10){
+        filledColumns.add(i);
+      }
+    }
+    System.out.println(filledColumns.toString());
+    return filledColumns;
+  }
+
+  private void deleteFilledRowsAndColumns(GridPane gp){
+    List<Integer> rows = checkForFilledRowIndecies(gp);
+    List<Integer> columns = checkForFilledColumnIndecies(gp);
+
+
+    for(Node node : gp.getChildren()){
+      if(rows.contains(GridPane.getRowIndex(node))){
+        setColorForNode(node, "#ffffff");
+        continue;:x:
+      }
+      if(columns.contains(GridPane.getColumnIndex(node))){
+        setColorForNode(node, "#ffffff");
+      }
+    }
+  }
+
+  private void reRenderAllNextElements(GridPane e1, GridPane e2, GridPane e3){
+    System.out.println("rerender checking");
+    if(checkIfAllBlank(e1, e2, e3)){
+      System.out.println("woah, it's empty");
+      renderRandomElement("#b81111", e1);
+      renderRandomElement("#b81111", e2);
+      renderRandomElement("#b81111", e3);
+    }
+  }
+
+  private int getScoreForElement(int[][] block){
+    int score = 0;
+    for(int i = 0; i < 5; i++){
+      for(int j = 0; j < 5; j++){
+        if(block[i][j] == 1){
+          score++;
+        }
+      }
+    }
+    return score;
+  }
 
   private int[][] getRandomElement(GridPane elementContainer) {
     int[][] block = new int[5][5];
@@ -133,12 +223,15 @@ public class Main extends Application {
     }
     return block;
   }
+
+
   @Override
   public void start(Stage primaryStage) throws Exception{
     Parent root = FXMLLoader.load(getClass().getResource("sample.fxml"));
     primaryStage.setTitle("jebanza");
     Scene scene = new Scene(root, 1000, 770);
     GridPane gameArea = (GridPane) scene.lookup("#gameArea");
+    renderBlank(gameArea);
     for(Node node : gameArea.getChildren()){
       node.setOnMouseClicked(new EventHandler<MouseEvent>() {
         @Override
@@ -150,27 +243,32 @@ public class Main extends Application {
     GridPane nextElement2 = (GridPane) scene.lookup("#nextElement2");
     GridPane nextElement3 = (GridPane) scene.lookup("#nextElement3");
 
+    renderRandomElement("#b81111", nextElement1);
+    renderRandomElement("#b81111", nextElement2);
+    renderRandomElement("#b81111", nextElement3);
+
+
     nextElement1.setOnMouseClicked(new EventHandler<MouseEvent>() {
       @Override
       public void handle(MouseEvent mouseEvent) {
         for(Node node : gameArea.getChildren()){
           node.setOnMouseEntered(e -> {
-            int[][] s = getPlayArea(gameArea);
             int[][] actualBlock = getRandomElement(nextElement1);
             renderElementIfPossible(gameArea, actualBlock, (int)e.getSceneX() / 50, (int)e.getSceneY() / 50, "#d4d0c7");
           });
           node.setOnMouseExited(e -> {
-            int[][] s = getPlayArea(gameArea);
-            int[][] actualBlock = getRandomElement(nextElement1);
             deleteGreyElements(gameArea);
           });
           node.setOnMouseClicked(e -> {
-            int[][] s = getPlayArea(gameArea);
             int[][] actualBlock = getRandomElement(nextElement1);
             boolean isGood = renderElementIfPossible(gameArea, actualBlock, (int)e.getSceneX() / 50, (int)e.getSceneY() / 50, "#b81111");
             if(isGood){
-              int[][] newActual = getRandomElement();
-              renderRandomElement("#b81111", nextElement1);
+              Label scoreView = (Label) scene.lookup("#showScore");
+              System.out.println(scoreView.toString());
+              scoreView.setText(Integer.valueOf(scoreView.getText() + getScoreForElement(actualBlock)).toString());
+              renderBlank(nextElement1);
+              reRenderAllNextElements(nextElement1, nextElement2, nextElement3);
+              deleteFilledRowsAndColumns(gameArea);
             }
           });
         }
@@ -182,22 +280,21 @@ public class Main extends Application {
       public void handle(MouseEvent mouseEvent) {
         for(Node node : gameArea.getChildren()){
           node.setOnMouseEntered(e -> {
-            int[][] s = getPlayArea(gameArea);
             int[][] actualBlock = getRandomElement(nextElement2);
             renderElementIfPossible(gameArea, actualBlock, (int)e.getSceneX() / 50, (int)e.getSceneY() / 50, "#d4d0c7");
           });
           node.setOnMouseExited(e -> {
-            int[][] s = getPlayArea(gameArea);
-            int[][] actualBlock = getRandomElement(nextElement2);
             deleteGreyElements(gameArea);
           });
           node.setOnMouseClicked(e -> {
-            int[][] s = getPlayArea(gameArea);
             int[][] actualBlock = getRandomElement(nextElement2);
             boolean isGood = renderElementIfPossible(gameArea, actualBlock, (int)e.getSceneX() / 50, (int)e.getSceneY() / 50, "#b81111");
             if(isGood){
-              int[][] newActual = getRandomElement();
-              renderRandomElement("#b81111", nextElement2);
+              Label scoreView = (Label) scene.lookup("#showScore");
+              scoreView.setText(Integer.valueOf(scoreView.getText() + getScoreForElement(actualBlock)).toString());
+              renderBlank(nextElement2);
+              reRenderAllNextElements(nextElement1, nextElement2, nextElement3);
+              deleteFilledRowsAndColumns(gameArea);
             }
           });
         }
@@ -209,22 +306,21 @@ public class Main extends Application {
       public void handle(MouseEvent mouseEvent) {
         for(Node node : gameArea.getChildren()){
           node.setOnMouseEntered(e -> {
-            int[][] s = getPlayArea(gameArea);
             int[][] actualBlock = getRandomElement(nextElement3);
             renderElementIfPossible(gameArea, actualBlock, (int)e.getSceneX() / 50, (int)e.getSceneY() / 50, "#d4d0c7");
           });
           node.setOnMouseExited(e -> {
-            int[][] s = getPlayArea(gameArea);
-            int[][] actualBlock = getRandomElement(nextElement3);
             deleteGreyElements(gameArea);
           });
           node.setOnMouseClicked(e -> {
-            int[][] s = getPlayArea(gameArea);
             int[][] actualBlock = getRandomElement(nextElement3);
             boolean isGood = renderElementIfPossible(gameArea, actualBlock, (int)e.getSceneX() / 50, (int)e.getSceneY() / 50, "#b81111");
             if(isGood){
-              int[][] newActual = getRandomElement();
-              renderRandomElement("#b81111", nextElement3);
+              Label scoreView = (Label) scene.lookup("#showScore");
+              scoreView.setText(Integer.valueOf(scoreView.getText() + getScoreForElement(actualBlock)).toString());
+              renderBlank(nextElement3);
+              reRenderAllNextElements(nextElement1, nextElement2, nextElement3);
+              deleteFilledRowsAndColumns(gameArea);
             }
           });
         }

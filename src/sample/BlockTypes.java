@@ -1,6 +1,33 @@
 package sample;
 
+import java.util.Random;
+
 public class BlockTypes {
+
+  public static String getRandomCoolor(){
+    Random r = new Random();
+    int randomColorId = r.nextInt(8);
+    switch (randomColorId){
+      case 0:
+        return "#f21400";
+      case 1:
+        return "#f28d00";
+      case 2:
+        return "#f2d200";
+      case 3:
+        return "#71f200";
+      case 4:
+        return "#00f2be";
+      case 5:
+        return "#8500f2";
+      case 6:
+        return "#f200de";
+      case 7:
+        return "#1000f2";
+    }
+    return "#ffffff";
+  }
+
 
   static int[][][] blockTypes = new int[][][] {
     {
@@ -309,4 +336,10 @@ public class BlockTypes {
       }
     }
   };
+
+  public static int[][] getRandomElement(){
+    Random r = new Random();
+    return BlockTypes.blockTypes[r.nextInt(BlockTypes.blockTypes.length)];
+  }
+
 }
